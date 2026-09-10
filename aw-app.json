@@ -1,0 +1,135 @@
+{
+  "manifest_version": 1,
+  "id": "apple-automation",
+  "name": "Apple Automation",
+  "version": "0.1.0",
+  "description": "Drive the iOS Simulator on a linked macOS host semantically — read accessibility labels/identifiers and tap, type and gesture BY IDENTIFIER instead of pixel coordinates. Replaces the VNC pixel-coordinate workaround for iOS bug repro. Reached through aw-remote-hosts; no fixed machine, every setting is per-call overridable.",
+  "icon": "smartphone",
+  "category": "Integrations",
+  "tier": "inprocess",
+  "requires_ui_refresh": true,
+  "publisher": "TekFlox",
+  "resource_estimate": {
+    "cpu": "low",
+    "memory": "low",
+    "disk": "low"
+  },
+  "runtime": {
+    "python": ">=3.11",
+    "entrypoint": "apple_automation_app.plugin:AppleAutomationAppPlugin",
+    "pip_requires": []
+  },
+  "permissions": [
+    "routes:register",
+    "secrets:own",
+    "net:outbound",
+    "fs:workspace-data"
+  ],
+  "contributes": {
+    "routes": [
+      {
+        "prefix": "/api/apps/apple-automation"
+      }
+    ],
+    "windows": [
+      {
+        "id": "apple-automation.main",
+        "title": "Apple Automation",
+        "icon": "smartphone",
+        "body": {
+          "type": "declarative",
+          "spec": "windows/main.json"
+        }
+      }
+    ],
+    "settings_panels": [
+      {
+        "id": "apple-automation.settings",
+        "window": "apple-automation.main"
+      }
+    ],
+    "mcp": {
+      "reload_on_save": false,
+      "provides": [
+        "sim_list",
+        "sim_boot",
+        "sim_shutdown",
+        "sim_openurl",
+        "sim_screenshot",
+        "sim_install_app",
+        "sim_launch_app",
+        "sim_terminate_app",
+        "sim_describe_ui",
+        "sim_tap",
+        "sim_type",
+        "sim_swipe",
+        "sim_gesture",
+        "sim_button",
+        "sim_status",
+        "sim_provision"
+      ]
+    },
+    "skills": [
+      {
+        "id": "aw-apple-automation",
+        "path": "skills/aw-apple-automation/SKILL.md",
+        "description": "Drive the iOS Simulator on a linked macOS host semantically — list/boot a simulator, read its accessibility tree, and tap/type/swipe/gesture BY IDENTIFIER instead of pixel coordinates. Use for anything about the iOS Simulator, iOS bug repro, or piloting aw-mobile's iOS app."
+      }
+    ]
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "remote_backend_url": {
+        "type": "string",
+        "description": "aw-backend base URL that fronts aw-remote-hosts, e.g. https://api.aw.tekflox.com. Every call goes through {url}/api/workspaces/{remote_workspace}/remote-hosts/{remote_host_id}/... . Set all three of remote_backend_url/remote_workspace/remote_token or none — with any one missing the tools fail naming exactly what's absent rather than guessing a host."
+      },
+      "remote_workspace": {
+        "type": "string",
+        "description": "The CALLING workspace's own slug (e.g. 'aw') — NOT the slug the target host happens to be registered under. aw-backend resolves host ownership server-side, so a host linked to a different workspace of yours is still reached via this workspace's own slug. Using the host's slug here returns 401."
+      },
+      "remote_token": {
+        "type": "string",
+        "x-secret": true,
+        "description": "Bearer token for aw-backend — this workspace's AW_WORKSPACE_HOST_TOKEN (from the aw-remote-host /link handshake). Routed to the zero-knowledge secret store via POST /api/apps/apple-automation/settings — never stored in plain config, because it can run arbitrary commands on a personal Mac."
+      },
+      "remote_host_id": {
+        "type": "string",
+        "default": "824decc7e0610089",
+        "description": "Id of the linked macOS host running Xcode/the Simulator, from 'aw-workspace-cli remote-hosts hosts'. Defaults to Frederico's Mac.Home. Every tool accepts a per-call remote_host_id override."
+      },
+      "axe_version": {
+        "type": "string",
+        "default": "1.8.0",
+        "description": "Pinned AXe (github.com/cameroncooke/AXe) version this app installs and calls for accessibility/input tools. Deliberately pinned, not 'latest' — a private-API tool that silently upgrades under you is a debugging nightmare. Bump it (and the matching sha256 in axe_agent.py) deliberately, e.g. after an Xcode major bump."
+      },
+      "axe_dir": {
+        "type": "string",
+        "default": "~/.aw-apple-automation",
+        "description": "Directory on the REMOTE host under which AXe is installed, version-keyed as <axe_dir>/axe-<axe_version>/. A leading ~ is expanded against the remote host's own home, not this workspace's."
+      },
+      "default_udid": {
+        "type": "string",
+        "description": "Optional simulator UDID to target when none is passed per-call. Leave empty to target whichever simulator is currently Booted — every tool accepts a per-call udid override."
+      },
+      "screenshot_dir": {
+        "type": "string",
+        "default": ".tmp/apple-automation/",
+        "description": "Directory on THIS workspace's own filesystem where sim_screenshot (and sim_describe_ui's raw:true escape hatch) save files, relative to the workspace root."
+      }
+    },
+    "required": []
+  },
+  "dependencies": {
+    "apps": [
+      {
+        "id": "mcp-gateway",
+        "version": ">=0.1.0",
+        "required": true,
+        "reason": "This app contributes an mcp.json entry (the 'aw-apple-automation' server) that MCP Gateway discovers and merges; without the gateway no agent can reach its tools."
+      }
+    ],
+    "note": "Runtime-enforced app dependency: aw-workspace loads mcp-gateway before this app so the gateway can scan apple-automation/mcp.json."
+  },
+  "migrations": {}
+}

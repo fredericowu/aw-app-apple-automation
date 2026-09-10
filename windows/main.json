@@ -1,0 +1,105 @@
+{
+  "layout": "stack",
+  "regions": [
+    {
+      "id": "status",
+      "widgets": [
+        { "type": "markdown", "value": "## Apple Automation" },
+        {
+          "type": "auth_status",
+          "bind": "GET /api/apps/apple-automation/status",
+          "logout_action": { "call": "POST /api/apps/apple-automation/logout" },
+          "loading_text": "Checking aw-remote-hosts token…",
+          "logged_in_text": "Token saved — {tools} tools are live on aw-gateway as aw__aw_apple_automation__*, targeting host {remote_host_id} (AXe {axe_version}).",
+          "logged_out_text": "No token yet. The tools are registered and will tell any agent that calls them to come here."
+        }
+      ]
+    },
+    {
+      "id": "setup",
+      "widgets": [
+        {
+          "type": "markdown",
+          "value": "### Setup\nThese tools run `xcrun simctl` and AXe on a macOS host reached through **aw-remote-hosts**, not on this workspace itself. Fill in all four:\n\n- **Backend URL / Workspace / Token** — the aw-backend that fronts your linked hosts, this (calling) workspace's own slug, and its `AW_WORKSPACE_HOST_TOKEN`. Get these from `aw-workspace-cli remote-hosts hosts` / your `.env`.\n- **Remote host id** — which linked macOS host has Xcode/the Simulator. Pre-filled for Frederico's Mac.Home.\n\nSet all three of Backend URL / Workspace / Token, or none — with only one or two present the tools fail naming exactly what's missing rather than guessing a host."
+        },
+        {
+          "type": "form",
+          "id": "apple_automation_plain_settings",
+          "submit": { "call": "POST /api/apps/apple-automation/config" },
+          "submit_label": "Save",
+          "fields": [
+            {
+              "key": "remote_backend_url",
+              "label": "aw-backend URL",
+              "input": "text",
+              "placeholder": "https://api.aw.tekflox.com"
+            },
+            {
+              "key": "remote_workspace",
+              "label": "Calling workspace slug",
+              "input": "text",
+              "placeholder": "aw"
+            },
+            {
+              "key": "remote_host_id",
+              "label": "Remote macOS host id",
+              "input": "text",
+              "placeholder": "824decc7e0610089"
+            },
+            {
+              "key": "axe_version",
+              "label": "Pinned AXe version",
+              "input": "text",
+              "placeholder": "1.8.0"
+            },
+            {
+              "key": "axe_dir",
+              "label": "AXe install directory on the remote host",
+              "input": "text",
+              "placeholder": "~/.aw-apple-automation"
+            },
+            {
+              "key": "default_udid",
+              "label": "Default simulator UDID (optional)",
+              "input": "text"
+            },
+            {
+              "key": "screenshot_dir",
+              "label": "Screenshot directory (workspace-relative)",
+              "input": "text",
+              "placeholder": ".tmp/apple-automation/"
+            }
+          ]
+        },
+        {
+          "type": "form",
+          "id": "apple_automation_token",
+          "submit": { "call": "POST /api/apps/apple-automation/settings" },
+          "submit_label": "Save token",
+          "fields": [
+            {
+              "key": "remote_token",
+              "label": "aw-backend bearer token",
+              "input": "password",
+              "description": "Stored in the zero-knowledge secret store. Takes effect on the next tool call — no restart."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "widgets": [
+        {
+          "type": "markdown",
+          "value": "### Verify\nA saved token is not a working one — wrong workspace slug, an expired token, or the host being offline all look identical until something actually calls out. This runs a real `sim_status` (Xcode version, booted simulators, AXe install state) against the configured host.\n\nAXe itself isn't installed by Settings — call `sim_provision` (any agent, or via MCP) once per host after saving the settings above."
+        },
+        {
+          "type": "button",
+          "label": "Test the connection",
+          "action": { "call": "POST /api/apps/apple-automation/test" }
+        }
+      ]
+    }
+  ]
+}
